@@ -13,3 +13,7 @@ They were compiled as part of [MissingLynk](https://github.com/Missing-Lynk), an
 - `carrier-board.md` - the carrier board: flash, storage, and how the parts are wired together.
 
 Accuracy is best-effort and device-specific (reference unit: BetaFPV VR04 HD, firmware `1.0.44.rel`). Corrections welcome.
+
+## See also
+
+Mads Tech's [FPV wiki](https://fpvwiki.co.uk/) is the best community reference for this platform - in particular the [ArtLynk hardware breakdown](https://fpvwiki.co.uk/artosyn-kap-artlink-digital-fpv-systems-betafpv-artlink-hglrc-draco-skyzone-steadydigital-more), which catalogues the ArtLynk-based devices across brands (BetaFPV, HGLRC, Skyzone, SteadyDigital, and more). Great background on which hardware this platform spans.
