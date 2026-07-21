@@ -58,7 +58,7 @@ The per-mode value table (Race/Freestyle/Long-Range -> {power, MCS, bitrate, ban
 
 ## Control interface (`bb_ioctl`)
 
-The vendor's `AR_AR8030_{RX,TX}_*` functions are thin wrappers over a single primitive, `bb_ioctl(handle, code, in, out)`, exposed by the baseband driver. Those wrappers are static inside `ar_lowdelay` (not linkable), so the open code (`libre/sdk/include/link.h` / `link.c`) reimplements them over `bb_ioctl`. The command class selects GET (`0x010000xx`) vs SET (`0x020000xx`).
+The vendor's `AR_AR8030_{RX,TX}_*` functions are thin wrappers over a single primitive, `bb_ioctl(handle, code, in, out)`, exposed by the baseband driver. Those wrappers are static inside `ar_lowdelay` (not linkable), so the open code (`userspace/ml-linkd/bb-cmd.h`) reimplements them over `bb_ioctl`. The command class selects GET (`0x010000xx`) vs SET (`0x020000xx`).
 
 | code | call | in / out |
 |---|---|---|
@@ -79,6 +79,12 @@ The vendor's `AR_AR8030_{RX,TX}_*` functions are thin wrappers over a single pri
 | `0x02000003` | SET ap mac | |
 
 Band (channel-set) select is one layer up, in `ar_lowdelay`/`liblowdelay_mid` (`SetFastMode` cmd 0x3c / `GetFastMode` 0x3d, also the `/usrdata/lowdelay/fastmode` file): Race vs Normal. Out-of-range channel/MCS values crash the firmware, so clamp before writing.
+
+### Wire payload length is fixed per command (crash-relevant)
+
+`bb_ioctl` does not send the caller's struct size on the wire. It looks the command up in a fixed **92-entry `{code, in_len, out_len}` table** (`get_bb_ioctl_cmdiptlen` @VA 0x4afa40 reading the array at VA 0x4eb480 in `ar_lowdelay`) and always stamps that table's `in_len` as the frame payload length, zero-padding the caller's buffer up to it. So the wire length is a property of the command, not of how many bytes the caller filled in: pair mode enters with just `{0x01, 0x01}` meaningful but goes out as a **14-byte** payload; the pair-lock's `{0x00,0x01,MAC}` goes out as **22 bytes**. Sending the short "meaningful" length instead is a malformed frame, and malformed RF setters have crashed the firmware, so this length is authoritative for any new setter we wire up.
+
+The full table (all 92 `{class, selector, in_len, out_len}` rows, transcribed from the ELF) lives in `userspace/ml-linkd/bb-cmd.h` as `bb_cmd_lens[]`, where `bb_build_cmd()` uses it to pad every frame. Read it there rather than duplicating it here; `in` = host-to-chip payload bytes, `out` = chip reply payload bytes, both excluding the 19-byte frame envelope.
 
 ## Link transport (framing, credit)
 
